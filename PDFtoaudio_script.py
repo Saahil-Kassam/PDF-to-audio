@@ -1,41 +1,64 @@
-import pyttsx3
-import PyPDF2
 import tkinter as tk
 from tkinter import filedialog
+from tkinter import ttk, messagebox
+import pyttsx3
+import PyPDF2
 
-# Function to open file explorer and get selected file path
+# Initialize the global variable to store the selected PDF file path
+pdf_path = ''
+
+# Function to open file dialog and store the selected PDF file path
 def open_file_dialog():
-    root = tk.Tk()
-    root.withdraw()
-    file_path = filedialog.askopenfilename(filetypes=[("PDF Files", "*.pdf")])
-    return file_path
+    global pdf_path
+    pdf_path = filedialog.askopenfilename()
+    if pdf_path:
+        print("Selected file:", pdf_path)
+        # Update the text in the text box to display the selected file path
+        file_path_text.delete(1.0, tk.END)  # Clear previous text
+        file_path_text.insert(tk.END, pdf_path)
 
-# Open file dialog to select PDF file
-pdf_path = open_file_dialog()
+# Function to convert selected PDF to audio
+def file_select():
+    global pdf_path
+    if pdf_path:
+        with open(pdf_path, 'rb') as file:
+            pdf_reader = PyPDF2.PdfReader(file)
+            text = ''
+            for page_num in range(len(pdf_reader.pages)):
+                page = pdf_reader.pages[page_num]
+                text += page.extract_text()
 
-# Ensure file is selected
-if pdf_path:
-    with open(pdf_path, 'rb') as file:
-        # Initialize the PDF reader
-        pdf_reader = PyPDF2.PdfReader(file)
+            speaker = pyttsx3.init()
+            audio_file_name = pdf_path[:-4] + '_audio.mp3'
+            speaker.save_to_file(text, audio_file_name)
+            speaker.runAndWait()
+            speaker.stop()
 
-        # Initialize the text variable to store extracted text
-        text = ''
+            #message box to show when conversion is complete
+            messagebox.showinfo("Succcess", "Conversion is complete!")
+    else:
+        #show message if no file is selected
+        messagebox.showerror("Error", "No file selected!")
 
-        # Extract text from each page of the PDF
-        for page_num in range(len(pdf_reader.pages)):
-            page = pdf_reader.pages[page_num]
-            text += page.extract_text()
+# Create the Tkinter window
+root = tk.Tk()
+root.title("PDF to mp3 converter")
 
-        # Initialize the text-to-speech engine
-        speaker = pyttsx3.init()
+# Set window dimensions
+canvas = tk.Canvas(root, height=300, width=700, bg="#2d3139", highlightthickness=0)
+canvas.pack()
 
-        # Convert extracted text to audio
-        audio_file_name = pdf_path[:-4] + '_audio.mp3'  # Create a new file name for audio
-        speaker.save_to_file(text, audio_file_name)
-        speaker.runAndWait()
+# Create a button to open the file dialog
+button = tk.Button(root, text="Open File Dialog ", command=open_file_dialog, bg="#5a6272", fg="white")
+button.place(x=20, y=20)
 
-        # Stop the engine
-        speaker.stop()
-else:
-    print("No file selected")
+# Create a button to convert selected PDF to audio
+button2 = tk.Button(root, text="Convert to Audio", command=file_select, bg="#5a6272",fg="white")
+button2.place(x=20, y=70)
+
+# Create a text box to display the selected file path
+file_path_text = tk.Text(root, height=1, width=50, bg="#5a6272", fg="white")
+file_path_text.place(x=150, y=20)
+
+# Run the Tkinter main loop
+root.mainloop()
